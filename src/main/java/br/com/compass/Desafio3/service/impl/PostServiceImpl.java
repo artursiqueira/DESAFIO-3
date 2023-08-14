@@ -1,6 +1,5 @@
 package br.com.compass.Desafio3.service.impl;
 
-import br.com.compass.Desafio3.DTO.PostDto;
 import br.com.compass.Desafio3.entity.Comment;
 import br.com.compass.Desafio3.entity.History;
 import br.com.compass.Desafio3.entity.Post;
@@ -9,7 +8,8 @@ import br.com.compass.Desafio3.repository.CommentRepository;
 import br.com.compass.Desafio3.repository.HistoryRepository;
 import br.com.compass.Desafio3.repository.PostRepository;
 import br.com.compass.Desafio3.service.PostService;
-import org.modelmapper.ModelMapper;
+import jakarta.transaction.Transactional;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -21,16 +21,16 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 @Service
+@Transactional
 public class PostServiceImpl implements PostService {
 
     private static final String EXTERNAL_API_URL = "https://jsonplaceholder.typicode.com";
     private final PostRepository postRepository;
     private final CommentRepository commentRepository;
     private final HistoryRepository historyRepository;
-    private final ModelMapper modelMapper;
 
-    public PostServiceImpl(ModelMapper modelMapper, PostRepository postRepository, CommentRepository commentRepository, HistoryRepository historyRepository) {
-        this.modelMapper = modelMapper;
+    @Autowired
+    public PostServiceImpl(PostRepository postRepository, CommentRepository commentRepository, HistoryRepository historyRepository) {
         this.postRepository = postRepository;
         this.commentRepository = commentRepository;
         this.historyRepository = historyRepository;
@@ -74,12 +74,10 @@ public class PostServiceImpl implements PostService {
     @Override
     public CompletableFuture<Post> processPostAsync(Long postId, Post requestBody) {
         Post newPost = new Post();
-        newPost.setId(postId);
         newPost.setBody(requestBody.getBody());
         newPost.setTitle(requestBody.getTitle());
 
         History enabledHistory = new History();
-        enabledHistory.setId(postId);
         enabledHistory.setDate(new Date());
         enabledHistory.setStatus(PostStatus.ENABLED);
         enabledHistory.setPost(newPost);
@@ -92,8 +90,6 @@ public class PostServiceImpl implements PostService {
         newPost.setComments(comments);
 
         savePost(newPost);
-        historyRepository.save(enabledHistory);
-        commentRepository.saveAll(comments);
 
         return CompletableFuture.completedFuture(newPost);
     }
@@ -178,10 +174,5 @@ public class PostServiceImpl implements PostService {
     @Override
     public void savePost(Post post) {
         postRepository.save(post);
-    }
-
-    @Override
-    public PostDto convertToDto(Post post) {
-        return modelMapper.map(post, PostDto.class);
     }
 }

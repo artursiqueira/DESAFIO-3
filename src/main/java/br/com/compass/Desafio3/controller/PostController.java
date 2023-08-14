@@ -47,19 +47,6 @@ public class PostController {
 
     @PostMapping("/{postId}")
     public ResponseEntity<PostDto> processPost(@PathVariable Long postId, @RequestBody Post requestBody) {
-        if (postId < 1 || postId > 100) {
-            return ResponseEntity.badRequest().build();
-        }
-
-        Post existingPost = postService.findPostById(postId);
-        if (existingPost != null) {
-            return ResponseEntity.badRequest().build();
-        }
-
-        if (!postId.equals(requestBody.getId())) {
-            return ResponseEntity.badRequest().build();
-        }
-
         CompletableFuture<Post> processedPostFuture = postService.processPostAsync(postId, requestBody);
 
         try {
@@ -71,7 +58,7 @@ public class PostController {
             PostDto processedPostDto = convertToDto(processedPost);
             return ResponseEntity.ok(processedPostDto);
         } catch (InterruptedException | ExecutionException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            throw new RuntimeException("Error processing post asynchronously", e);
         }
     }
     @DeleteMapping("/{postId}")

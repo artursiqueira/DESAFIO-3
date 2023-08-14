@@ -1,6 +1,5 @@
 package br.com.compass.Desafio3.service;
 
-import br.com.compass.Desafio3.DTO.PostDto;
 import br.com.compass.Desafio3.entity.Comment;
 import br.com.compass.Desafio3.entity.Post;
 
@@ -22,8 +21,6 @@ public interface PostService {
     Comment[] findCommentsForPost(Long postId);
 
     Comment findCommentById(Long commentId);
-
-    PostDto convertToDto(Post post);
 
     void savePost(Post post);
 
