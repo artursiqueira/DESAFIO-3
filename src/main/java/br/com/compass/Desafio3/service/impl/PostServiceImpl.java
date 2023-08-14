@@ -14,11 +14,10 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -39,136 +38,200 @@ public class PostServiceImpl implements PostService {
     @Async
     @Override
     public CompletableFuture<List<Post>> queryPostsAsync() {
-        List<Post> posts = new ArrayList<>();
+        List<Post> posts = postRepository.findAll();
 
-        RestTemplate restTemplate = new RestTemplate();
-        Post[] postsArray = restTemplate.getForObject(EXTERNAL_API_URL + "/posts", Post[].class);
+        List<CompletableFuture<Void>> futures = new ArrayList<>();
 
-        if (postsArray != null) {
-            for (Post post : postsArray) {
-                post.setHistory(new ArrayList<>());
+        for (Post post : posts) {
+            Long postId = post.getId();
 
-                History history = new History();
-                history.setId(post.getId());
-                history.setDate(new Date());
-                history.setStatus(PostStatus.ENABLED);
-                history.setPost(post);
-                post.getHistory().add(history);
+            CompletableFuture<Comment[]> commentsFuture = findCommentsForPostAsync(postId);
+            CompletableFuture<Optional<History>> historyFuture = findHistoryForPostAsync(postId);
 
-                List<Comment> comments = List.of(findCommentsForPost(post.getId()));
-                for (Comment comment : comments) {
-                    comment.setPost(post);
-                }
-                post.setComments(comments);
+            CompletableFuture<Void> combinedFuture = CompletableFuture.allOf(commentsFuture, historyFuture)
+                    .thenApplyAsync(voidResult -> {
+                        try {
+                            Comment[] comments = commentsFuture.get();
+                            Optional<History> historyOptional = historyFuture.get();
 
-                posts.add(post);
-            }
+                            if (comments != null) {
+                                List<Comment> commentsList = Arrays.asList(comments);
+                                post.setComments(commentsList);
+                            }
+
+                            historyOptional.ifPresent(history -> {
+                                List<History> historyList = new ArrayList<>();
+                                historyList.add(history);
+                                post.setHistory(historyList);
+                            });
+                        } catch (InterruptedException | ExecutionException e) {
+                        }
+
+                        return null;
+                    });
+
+            futures.add(combinedFuture);
         }
 
-        postRepository.saveAll(posts);
+        CompletableFuture<Void> allOf = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
 
-        return CompletableFuture.completedFuture(posts);
+        return allOf.thenApplyAsync(voidResult -> posts);
     }
 
     @Async
     @Override
-    public CompletableFuture<Post> processPostAsync(Long postId, Post requestBody) {
-        Post newPost = new Post();
-        newPost.setBody(requestBody.getBody());
-        newPost.setTitle(requestBody.getTitle());
+    public CompletableFuture<Post> processPostAsync(Long postId) {
+        RestTemplate restTemplate = new RestTemplate();
+        Post externalPost = restTemplate.getForObject(EXTERNAL_API_URL + "/posts/" + postId, Post.class);
 
-        History enabledHistory = new History();
-        enabledHistory.setDate(new Date());
-        enabledHistory.setStatus(PostStatus.ENABLED);
-        enabledHistory.setPost(newPost);
-        newPost.getHistory().add(enabledHistory);
+        if (externalPost != null) {
+            History history = new History();
+            history.setId(postId);
+            history.setDate(new Date());
+            history.setStatus(PostStatus.ENABLED);
+            history.setPost(externalPost);
 
-        List<Comment> comments = List.of(findCommentsForPost(postId));
-        for (Comment comment : comments) {
-            comment.setPost(newPost);
+            externalPost.setHistory(Collections.singletonList(history));
+
+            CompletableFuture<Comment[]> commentsFuture = findCommentsForPostAsync(postId);
+
+            try {
+                Comment[] commentsArray = commentsFuture.get();
+                if (commentsArray != null) {
+                    List<Comment> comments = Arrays.asList(commentsArray);
+
+                    for (Comment comment : comments) {
+                        comment.setPost(externalPost);
+                    }
+
+                    externalPost.setComments(comments);
+                }
+            } catch (InterruptedException | ExecutionException e) {
+                history.setStatus(PostStatus.FAILED);
+            }
+
+            savePost(externalPost);
+
+            return CompletableFuture.completedFuture(externalPost);
         }
-        newPost.setComments(comments);
 
-        savePost(newPost);
-
-        return CompletableFuture.completedFuture(newPost);
+        return CompletableFuture.completedFuture(null);
     }
 
     @Async
     @Override
     public CompletableFuture<Post> disablePostAsync(Long postId) {
-        Post post = findPostById(postId);
+        return findPostByIdAsync(postId)
+                .thenCompose(post -> {
+                    if (post != null) {
+                        return findCommentsForPostAsync(postId)
+                                .thenApply(commentsArray -> {
+                                    List<Comment> comments = Arrays.asList(commentsArray);
 
-        List<Comment> comments = List.of(findCommentsForPost(post.getId()));
-        for (Comment comment : comments) {
-            comment.setPost(post);
-        }
-        post.setComments(comments);
+                                    for (Comment comment : comments) {
+                                        comment.setPost(post);
+                                    }
 
-        History history = new History();
-        history.setId(postId);
-        history.setDate(new Date());
-        history.setStatus(PostStatus.DISABLED);
-        history.setPost(post);
+                                    History history = new History();
+                                    history.setId(postId);
+                                    history.setDate(new Date());
+                                    history.setStatus(PostStatus.DISABLED);
+                                    history.setPost(post);
 
-        post.getHistory().add(history);
-        post.setHistory(Collections.singletonList(history));
+                                    post.getHistory().add(history);
+                                    post.setHistory(Collections.singletonList(history));
+                                    post.setComments(comments);
 
-        postRepository.save(post);
-        historyRepository.save(history);
+                                    for (Comment comment : comments) {
+                                        commentRepository.save(comment);
+                                    }
 
-        return CompletableFuture.completedFuture(post);
+                                    savePost(post);
+                                    historyRepository.save(history);
+
+                                    return post;
+                                });
+                    } else {
+                        return CompletableFuture.completedFuture(null);
+                    }
+                });
     }
 
     @Async
     @Override
     public CompletableFuture<Post> reprocessPostAsync(Long postId) {
-        Post post = findPostById(postId);
+        RestTemplate restTemplate = new RestTemplate();
+        Post externalPost = restTemplate.getForObject(EXTERNAL_API_URL + "/posts/" + postId, Post.class);
 
-        if (post != null) {
-            post.setId(postId);
-            post.setBody(post.getBody());
-            post.setTitle(post.getTitle());
+        if (externalPost != null) {
+            History history = new History();
+            history.setId(postId);
+            history.setDate(new Date());
+            history.setStatus(PostStatus.ENABLED);
+            history.setPost(externalPost);
 
-            List<Comment> comments = List.of(findCommentsForPost(post.getId()));
-            for (Comment comment : comments) {
-                comment.setPost(post);
+            externalPost.setHistory(Collections.singletonList(history));
+
+            CompletableFuture<Comment[]> commentsFuture = findCommentsForPostAsync(postId);
+
+            try {
+                Comment[] commentsArray = commentsFuture.get();
+                if (commentsArray != null) {
+                    List<Comment> newComments = Arrays.stream(commentsArray)
+                            .map(commentDto -> {
+                                Comment comment = new Comment();
+                                comment.setId(commentDto.getId());
+                                comment.setBody(commentDto.getBody());
+                                return comment;
+                            })
+                            .collect(Collectors.toList());
+
+                    externalPost.setComments(newComments);
+                }
+            } catch (InterruptedException | ExecutionException e) {
+                history.setStatus(PostStatus.FAILED);
             }
-            post.setComments(comments);
 
-            History enabledHistory = new History();
-            enabledHistory.setId(postId);
-            enabledHistory.setDate(new Date());
-            enabledHistory.setStatus(PostStatus.ENABLED);
-            enabledHistory.setPost(post);
-            post.getHistory().add(enabledHistory);
+            savePost(externalPost);
 
-            savePost(post);
+            return CompletableFuture.completedFuture(externalPost);
         }
 
+        return CompletableFuture.completedFuture(null);
+    }
+
+
+
+
+
+    @Async
+    @Override
+    public CompletableFuture<Post> findPostByIdAsync(Long postId) {
+        RestTemplate restTemplate = new RestTemplate();
+        Post post = restTemplate.getForObject(EXTERNAL_API_URL + "/posts/" + postId, Post.class);
         return CompletableFuture.completedFuture(post);
     }
 
-
-
-
-
+    @Async
     @Override
-    public Post findPostById(Long postId) {
+    public CompletableFuture<Comment[]> findCommentsForPostAsync(Long postId) {
         RestTemplate restTemplate = new RestTemplate();
-        return restTemplate.getForObject(EXTERNAL_API_URL + "/posts/" + postId, Post.class);
+        Comment[] comments = restTemplate.getForObject(EXTERNAL_API_URL + "/posts/" + postId + "/comments", Comment[].class);
+        return CompletableFuture.completedFuture(comments);
+    }
+    @Async
+    @Override
+    public CompletableFuture<Comment> findCommentByIdAsync(Long commentId) {
+        RestTemplate restTemplate = new RestTemplate();
+        Comment comment = restTemplate.getForObject(EXTERNAL_API_URL + "/comments/" + commentId, Comment.class);
+        return CompletableFuture.completedFuture(comment);
     }
 
+    @Async
     @Override
-    public Comment[] findCommentsForPost(Long postId) {
-        RestTemplate restTemplate = new RestTemplate();
-        return restTemplate.getForObject(EXTERNAL_API_URL + "/posts/" + postId + "/comments", Comment[].class);
-    }
-
-    @Override
-    public Comment findCommentById(Long commentId) {
-        RestTemplate restTemplate = new RestTemplate();
-        return restTemplate.getForObject(EXTERNAL_API_URL + "/comments/" + commentId, Comment.class);
+    public CompletableFuture<Optional<History>> findHistoryForPostAsync(Long postId) {
+        Optional<History> historyOptional = historyRepository.findByPostId(postId);
+        return CompletableFuture.completedFuture(historyOptional);
     }
 
     @Override

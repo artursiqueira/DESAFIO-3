@@ -32,13 +32,14 @@ public class PostController {
 
     @GetMapping
     public ResponseEntity<List<PostDto>> queryPosts() {
-        CompletableFuture<List<Post>> postsFuture = postService.queryPostsAsync();
-
         try {
-            List<Post> posts = postsFuture.get();
-            List<PostDto> postDtos = posts.stream()
-                    .map(this::convertToDto)
-                    .collect(Collectors.toList());
+            CompletableFuture<List<Post>> postsFuture = postService.queryPostsAsync();
+            CompletableFuture<List<PostDto>> postDtosFuture = postsFuture.thenApplyAsync(posts -> {
+                return posts.stream()
+                        .map(this::convertToDto)
+                        .collect(Collectors.toList());
+            });
+            List<PostDto> postDtos = postDtosFuture.get();
             return ResponseEntity.ok(postDtos);
         } catch (InterruptedException | ExecutionException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
@@ -46,21 +47,24 @@ public class PostController {
     }
 
     @PostMapping("/{postId}")
-    public ResponseEntity<PostDto> processPost(@PathVariable Long postId, @RequestBody Post requestBody) {
-        CompletableFuture<Post> processedPostFuture = postService.processPostAsync(postId, requestBody);
+    public CompletableFuture<ResponseEntity<PostDto>> processPost(@PathVariable Long postId) {
+        if (postId >= 1 && postId <= 100) {
+            CompletableFuture<Post> processedPostFuture = postService.processPostAsync(postId);
 
-        try {
-            Post processedPost = processedPostFuture.get();
-            if (processedPost == null) {
-                return ResponseEntity.notFound().build();
-            }
+            return processedPostFuture.thenApply(processedPost -> {
+                if (processedPost == null) {
+                    return ResponseEntity.notFound().build();
+                }
 
-            PostDto processedPostDto = convertToDto(processedPost);
-            return ResponseEntity.ok(processedPostDto);
-        } catch (InterruptedException | ExecutionException e) {
-            throw new RuntimeException("Error processing post asynchronously", e);
+                PostDto processedPostDto = convertToDto(processedPost);
+                return ResponseEntity.ok(processedPostDto);
+            });
+        } else {
+            return CompletableFuture.completedFuture(ResponseEntity.badRequest().build());
         }
     }
+
+
     @DeleteMapping("/{postId}")
     public ResponseEntity<PostDto> disablePost(@PathVariable Long postId) {
         if (postId < 1 || postId > 100) {
@@ -103,26 +107,28 @@ public class PostController {
 
 
     @GetMapping("/{postId}")
-    public ResponseEntity<PostDto> getPostById(@PathVariable Long postId) {
-        Post post = postService.findPostById(postId);
+    public ResponseEntity<CompletableFuture<PostDto>> getPostById(@PathVariable Long postId) {
+        CompletableFuture<Post> postFuture = postService.findPostByIdAsync(postId);
 
-        if (post != null) {
-            PostDto postDto = convertToDto(post);
-            return ResponseEntity.ok(postDto);
-        } else {
-            return ResponseEntity.notFound().build();
-        }
+        return ResponseEntity.ok(postFuture.thenApply(post -> {
+            if (post != null) {
+                return convertToDto(post);
+            } else {
+                return null;
+            }
+        }));
     }
 
     @GetMapping("/{postId}/comments")
-    public ResponseEntity<Comment[]> getCommentsForPost(@PathVariable Long postId) {
-        Comment[] comments = postService.findCommentsForPost(postId);
-        return ResponseEntity.ok(comments);
+    public ResponseEntity<CompletableFuture<Comment[]>> getCommentsForPost(@PathVariable Long postId) {
+        CompletableFuture<Comment[]> commentsFuture = postService.findCommentsForPostAsync(postId);
+        return ResponseEntity.ok(commentsFuture);
     }
     @GetMapping("/{postId}/comments/{commentId}")
-    public ResponseEntity<Comment> getCommentById(@PathVariable Long commentId) {
-        Comment comment = postService.findCommentById(commentId);
-        return ResponseEntity.ok(comment);
+    public ResponseEntity<CompletableFuture<Comment>> getCommentById(@PathVariable Long commentId) {
+        CompletableFuture<Comment> commentFuture = postService.findCommentByIdAsync(commentId);
+
+        return ResponseEntity.ok(commentFuture);
     }
     private PostDto convertToDto(Post post) {
         return modelMapper.map(post, PostDto.class);

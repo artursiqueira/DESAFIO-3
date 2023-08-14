@@ -19,12 +19,10 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 public class PostControllerTest {
-
     @InjectMocks
     private PostController postController;
 
@@ -40,7 +38,7 @@ public class PostControllerTest {
     }
 
     @Test
-    public void testQueryPosts(){
+    public void testQueryPosts() throws ExecutionException, InterruptedException {
         List<Post> mockPosts = new ArrayList<>();
         when(postService.queryPostsAsync()).thenReturn(CompletableFuture.completedFuture(mockPosts));
         when(modelMapper.map(any(Post.class), eq(PostDto.class))).thenReturn(new PostDto());
@@ -55,54 +53,57 @@ public class PostControllerTest {
     }
 
     @Test
-    public void testProcessPost(){
+    public void testProcessPost() throws ExecutionException, InterruptedException {
         Long postId = 1L;
-        Post requestBody = new Post();
         Post processedPost = new Post();
 
-        when(postService.findPostById(postId)).thenReturn(null);
-        when(postService.processPostAsync(postId, requestBody)).thenReturn(CompletableFuture.completedFuture(processedPost));
+        when(postService.processPostAsync(postId)).thenReturn(CompletableFuture.completedFuture(processedPost));
         when(modelMapper.map(any(Post.class), eq(PostDto.class))).thenReturn(new PostDto());
 
-        ResponseEntity<PostDto> response = postController.processPost(postId, requestBody);
+        ResponseEntity<PostDto> responseEntity = ResponseEntity.ok(new PostDto());
+        when(modelMapper.map(any(), eq(ResponseEntity.class))).thenReturn(responseEntity);
 
-        verify(postService).findPostById(postId);
-        verify(postService).processPostAsync(eq(postId), eq(requestBody));
+        ResponseEntity<PostDto> response = postController.processPost(postId).get();
+
+        verify(postService).processPostAsync(eq(postId));
         verify(modelMapper).map(processedPost, PostDto.class);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
     }
 
     @Test
-    public void testDisablePost(){
+    public void testDisablePost() {
         Long postId = 1L;
         Post post = new Post();
+        PostDto postDto = new PostDto();
 
         when(postService.disablePostAsync(postId)).thenReturn(CompletableFuture.completedFuture(post));
-        when(modelMapper.map(any(Post.class), eq(PostDto.class))).thenReturn(new PostDto());
+        when(modelMapper.map(eq(post), eq(PostDto.class))).thenReturn(postDto);
 
         ResponseEntity<PostDto> response = postController.disablePost(postId);
 
-        verify(postService).disablePostAsync(postId);
-        verify(modelMapper).map(post, PostDto.class);
+        verify(postService).disablePostAsync(eq(postId));
+        verify(modelMapper).map(eq(post), eq(PostDto.class));
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(postDto, response.getBody());
     }
 
     @Test
-    public void testReprocessPost(){
+    public void testReprocessPost() {
         Long postId = 1L;
         Post post = new Post();
+        PostDto postDto = new PostDto();
 
         when(postService.reprocessPostAsync(postId)).thenReturn(CompletableFuture.completedFuture(post));
-        when(modelMapper.map(any(Post.class), eq(PostDto.class))).thenReturn(new PostDto());
+        when(modelMapper.map(eq(post), eq(PostDto.class))).thenReturn(postDto);
 
         ResponseEntity<PostDto> response = postController.reprocessPost(postId);
 
-        verify(postService).reprocessPostAsync(postId);
-        verify(modelMapper).map(post, PostDto.class);
+        verify(postService).reprocessPostAsync(eq(postId));
+        verify(modelMapper).map(eq(post), eq(PostDto.class));
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(postDto, response.getBody());
     }
-
 }

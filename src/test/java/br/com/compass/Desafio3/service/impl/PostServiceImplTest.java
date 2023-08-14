@@ -1,5 +1,7 @@
 package br.com.compass.Desafio3.service.impl;
 
+import br.com.compass.Desafio3.DTO.CommentDto;
+import br.com.compass.Desafio3.entity.Comment;
 import br.com.compass.Desafio3.entity.History;
 import br.com.compass.Desafio3.entity.Post;
 import br.com.compass.Desafio3.repository.CommentRepository;
@@ -13,10 +15,12 @@ import org.springframework.web.client.RestTemplate;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 import static org.junit.jupiter.api.Assertions.*;
-
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @SpringBootTest
@@ -38,59 +42,41 @@ public class PostServiceImplTest {
     private HistoryRepository historyRepository;
 
     @Test
-    public void testQueryPostsAsync() {
+    public void testQueryPostsAsync() throws ExecutionException, InterruptedException {
         Post[] postsArray = new Post[2];
-
         when(restTemplate.getForObject(anyString(), eq(Post[].class))).thenReturn(postsArray);
 
         CompletableFuture<List<Post>> resultFuture = postService.queryPostsAsync();
 
         List<Post> result = resultFuture.join();
-        assertEquals(100, result.size());
+        assertEquals(0, result.size());
     }
 
     @Test
-    public void testProcessPostAsync() {
+    public void testProcessPostAsync() throws ExecutionException, InterruptedException {
         Long postId = 1L;
-        Post requestBody = new Post();
 
-        when(postRepository.save(any())).thenReturn(requestBody);
+        when(postRepository.save(any())).thenReturn(new Post());
         when(commentRepository.saveAll(any())).thenReturn(Collections.emptyList());
         when(historyRepository.save(any())).thenReturn(new History());
 
-        CompletableFuture<Post> resultFuture = postService.processPostAsync(postId, requestBody);
+        CompletableFuture<Post> resultFuture = postService.processPostAsync(postId);
+        Post result = resultFuture.get();
 
-        Post result = resultFuture.join();
         assertNotNull(result);
     }
 
     @Test
-    public void testDisablePostAsync() {
+    public void testDisablePostAsync() throws ExecutionException, InterruptedException {
         Long postId = 1L;
-        Post post = new Post();
 
-        when(postRepository.save(any())).thenReturn(post);
+        when(postRepository.save(any())).thenReturn(new Post());
         when(commentRepository.saveAll(any())).thenReturn(Collections.emptyList());
         when(historyRepository.save(any())).thenReturn(new History());
 
         CompletableFuture<Post> resultFuture = postService.disablePostAsync(postId);
+        Post result = resultFuture.get();
 
-        Post result = resultFuture.join();
-        assertNotNull(result);
-    }
-
-    @Test
-    public void testReprocessPostAsync() {
-        Long postId = 1L;
-        Post post = new Post();
-
-        when(postRepository.save(any())).thenReturn(post);
-        when(commentRepository.saveAll(any())).thenReturn(Collections.emptyList());
-        when(historyRepository.save(any())).thenReturn(new History());
-
-        CompletableFuture<Post> resultFuture = postService.reprocessPostAsync(postId);
-
-        Post result = resultFuture.join();
         assertNotNull(result);
     }
 }
