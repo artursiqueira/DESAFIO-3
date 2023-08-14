@@ -10,6 +10,7 @@ import br.com.compass.Desafio3.repository.HistoryRepository;
 import br.com.compass.Desafio3.repository.PostRepository;
 import br.com.compass.Desafio3.service.PostService;
 import org.modelmapper.ModelMapper;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -17,18 +18,15 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 @Service
 public class PostServiceImpl implements PostService {
 
     private static final String EXTERNAL_API_URL = "https://jsonplaceholder.typicode.com";
-
     private final PostRepository postRepository;
-
     private final CommentRepository commentRepository;
-
     private final HistoryRepository historyRepository;
-
     private final ModelMapper modelMapper;
 
     public PostServiceImpl(ModelMapper modelMapper, PostRepository postRepository, CommentRepository commentRepository, HistoryRepository historyRepository) {
@@ -38,8 +36,9 @@ public class PostServiceImpl implements PostService {
         this.historyRepository = historyRepository;
     }
 
+    @Async
     @Override
-    public List<Post> queryPosts() {
+    public CompletableFuture<List<Post>> queryPostsAsync() {
         List<Post> posts = new ArrayList<>();
 
         RestTemplate restTemplate = new RestTemplate();
@@ -68,11 +67,12 @@ public class PostServiceImpl implements PostService {
 
         postRepository.saveAll(posts);
 
-        return posts;
+        return CompletableFuture.completedFuture(posts);
     }
 
+    @Async
     @Override
-    public Post processPost(Long postId, Post requestBody) {
+    public CompletableFuture<Post> processPostAsync(Long postId, Post requestBody) {
         Post newPost = new Post();
         newPost.setId(postId);
         newPost.setBody(requestBody.getBody());
@@ -95,11 +95,12 @@ public class PostServiceImpl implements PostService {
         historyRepository.save(enabledHistory);
         commentRepository.saveAll(comments);
 
-        return newPost;
+        return CompletableFuture.completedFuture(newPost);
     }
 
+    @Async
     @Override
-    public Post disablePost(Long postId) {
+    public CompletableFuture<Post> disablePostAsync(Long postId) {
         Post post = findPostById(postId);
 
         List<Comment> comments = List.of(findCommentsForPost(post.getId()));
@@ -120,11 +121,12 @@ public class PostServiceImpl implements PostService {
         postRepository.save(post);
         historyRepository.save(history);
 
-        return post;
+        return CompletableFuture.completedFuture(post);
     }
 
+    @Async
     @Override
-    public Post reprocessPost(Long postId) {
+    public CompletableFuture<Post> reprocessPostAsync(Long postId) {
         Post post = findPostById(postId);
 
         if (post != null) {
@@ -138,7 +140,6 @@ public class PostServiceImpl implements PostService {
             }
             post.setComments(comments);
 
-
             History enabledHistory = new History();
             enabledHistory.setId(postId);
             enabledHistory.setDate(new Date());
@@ -149,7 +150,7 @@ public class PostServiceImpl implements PostService {
             savePost(post);
         }
 
-        return post;
+        return CompletableFuture.completedFuture(post);
     }
 
 
@@ -159,7 +160,6 @@ public class PostServiceImpl implements PostService {
     @Override
     public Post findPostById(Long postId) {
         RestTemplate restTemplate = new RestTemplate();
-
         return restTemplate.getForObject(EXTERNAL_API_URL + "/posts/" + postId, Post.class);
     }
 

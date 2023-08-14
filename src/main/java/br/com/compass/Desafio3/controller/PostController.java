@@ -6,10 +6,13 @@ import br.com.compass.Desafio3.entity.Post;
 import br.com.compass.Desafio3.service.PostService;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 
@@ -29,11 +32,17 @@ public class PostController {
 
     @GetMapping
     public ResponseEntity<List<PostDto>> queryPosts() {
-        List<Post> posts = postService.queryPosts();
-        List<PostDto> postDtos = posts.stream()
-                .map(this::convertToDto)
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(postDtos);
+        CompletableFuture<List<Post>> postsFuture = postService.queryPostsAsync();
+
+        try {
+            List<Post> posts = postsFuture.get();
+            List<PostDto> postDtos = posts.stream()
+                    .map(this::convertToDto)
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(postDtos);
+        } catch (InterruptedException | ExecutionException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 
     @PostMapping("/{postId}")
@@ -47,17 +56,23 @@ public class PostController {
             return ResponseEntity.badRequest().build();
         }
 
-        if (requestBody.getId() != null && !requestBody.getId().equals(postId)) {
+        if (!postId.equals(requestBody.getId())) {
             return ResponseEntity.badRequest().build();
         }
 
-        Post processedPost = postService.processPost(postId, requestBody);
-        if (processedPost == null) {
-            return ResponseEntity.notFound().build();
-        }
+        CompletableFuture<Post> processedPostFuture = postService.processPostAsync(postId, requestBody);
 
-        PostDto processedPostDto = convertToDto(processedPost);
-        return ResponseEntity.ok(processedPostDto);
+        try {
+            Post processedPost = processedPostFuture.get();
+            if (processedPost == null) {
+                return ResponseEntity.notFound().build();
+            }
+
+            PostDto processedPostDto = convertToDto(processedPost);
+            return ResponseEntity.ok(processedPostDto);
+        } catch (InterruptedException | ExecutionException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
     @DeleteMapping("/{postId}")
     public ResponseEntity<PostDto> disablePost(@PathVariable Long postId) {
@@ -65,11 +80,15 @@ public class PostController {
             return ResponseEntity.badRequest().build();
         }
 
-        Post post = postService.disablePost(postId);
-        PostDto postDto = convertToDto(post);
+        CompletableFuture<Post> postFuture = postService.disablePostAsync(postId);
 
-        return ResponseEntity.ok(postDto);
-
+        try {
+            Post post = postFuture.get();
+            PostDto postDto = convertToDto(post);
+            return ResponseEntity.ok(postDto);
+        } catch (InterruptedException | ExecutionException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 
     @PutMapping("/{postId}")
@@ -78,15 +97,20 @@ public class PostController {
             return ResponseEntity.badRequest().build();
         }
 
-        Post processedPost = postService.reprocessPost(postId);
-        if (processedPost == null) {
-            return ResponseEntity.notFound().build();
+        CompletableFuture<Post> processedPostFuture = postService.reprocessPostAsync(postId);
+
+        try {
+            Post processedPost = processedPostFuture.get();
+            if (processedPost == null) {
+                return ResponseEntity.notFound().build();
+            }
+
+            PostDto processedPostDto = convertToDto(processedPost);
+            return ResponseEntity.ok(processedPostDto);
+        } catch (InterruptedException | ExecutionException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
-
-        PostDto processedPostDto = convertToDto(processedPost);
-        return ResponseEntity.ok(processedPostDto);
     }
-
 
 
 

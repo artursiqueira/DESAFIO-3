@@ -1,0 +1,34 @@
+2023-08-10 19:33:27,153 | INFO  | Using Persistence Adapter: KahaDBPersistenceAdapter[C:\Users\artur\Documents\CompassUOL\UDEMY\WEEK-12-Challenge-3\apache-activemq-5.18.2\bin\..\data\kahadb] | org.apache.activemq.broker.BrokerService | main
+2023-08-10 19:33:27,160 | INFO  | Starting Persistence Adapter: KahaDBPersistenceAdapter[C:\Users\artur\Documents\CompassUOL\UDEMY\WEEK-12-Challenge-3\apache-activemq-5.18.2\bin\..\data\kahadb] | org.apache.activemq.broker.BrokerService | main
+2023-08-10 19:33:27,175 | INFO  | Starting KahaDBStore | org.apache.activemq.store.kahadb.KahaDBStore | main
+2023-08-10 19:33:27,176 | INFO  | Opening MessageDatabase | org.apache.activemq.store.kahadb.MessageDatabase | main
+2023-08-10 19:33:28,124 | INFO  | Starting Temp Data Store | org.apache.activemq.broker.BrokerService | main
+2023-08-10 19:33:28,126 | INFO  | PListStore:[C:\Users\artur\Documents\CompassUOL\UDEMY\WEEK-12-Challenge-3\apache-activemq-5.18.2\bin\..\data\localhost\tmp_storage] started | org.apache.activemq.store.kahadb.plist.PListStoreImpl | main
+2023-08-10 19:33:28,126 | INFO  | Starting Job Scheduler Store | org.apache.activemq.broker.BrokerService | main
+2023-08-10 19:33:28,126 | INFO  | Persistence Adapter successfully started | org.apache.activemq.broker.BrokerService | main
+2023-08-10 19:33:28,262 | INFO  | Apache ActiveMQ 5.18.2 (localhost, ID:shark-51110-1691706808135-0:1) is starting | org.apache.activemq.broker.BrokerService | main
+2023-08-10 19:33:28,277 | INFO  | Listening for connections at: tcp://shark:61616?maximumConnections=1000&wireFormat.maxFrameSize=104857600 | org.apache.activemq.transport.TransportServerThreadSupport | main
+2023-08-10 19:33:28,277 | INFO  | Connector openwire started | org.apache.activemq.broker.TransportConnector | main
+2023-08-10 19:33:28,280 | INFO  | Listening for connections at: amqp://shark:5672?maximumConnections=1000&wireFormat.maxFrameSize=104857600 | org.apache.activemq.transport.TransportServerThreadSupport | main
+2023-08-10 19:33:28,280 | INFO  | Connector amqp started | org.apache.activemq.broker.TransportConnector | main
+2023-08-10 19:33:28,283 | INFO  | Listening for connections at: stomp://shark:61613?maximumConnections=1000&wireFormat.maxFrameSize=104857600 | org.apache.activemq.transport.TransportServerThreadSupport | main
+2023-08-10 19:33:28,283 | INFO  | Connector stomp started | org.apache.activemq.broker.TransportConnector | main
+2023-08-10 19:33:28,285 | INFO  | Listening for connections at: mqtt://shark:1883?maximumConnections=1000&wireFormat.maxFrameSize=104857600 | org.apache.activemq.transport.TransportServerThreadSupport | main
+2023-08-10 19:33:28,285 | INFO  | Connector mqtt started | org.apache.activemq.broker.TransportConnector | main
+2023-08-10 19:33:28,288 | INFO  | Starting Jetty server | org.apache.activemq.transport.WebTransportServerSupport | main
+2023-08-10 19:33:28,321 | INFO  | Creating Jetty connector | org.apache.activemq.transport.WebTransportServerSupport | main
+2023-08-10 19:33:28,358 | WARN  | ServletContext@o.e.j.s.ServletContextHandler@6a472566{/,null,STARTING} has uncovered http methods for path: / | org.eclipse.jetty.security.SecurityHandler | main
+2023-08-10 19:33:28,422 | INFO  | Listening for connections at ws://shark:61614?maximumConnections=1000&wireFormat.maxFrameSize=104857600 | org.apache.activemq.transport.ws.WSTransportServer | main
+2023-08-10 19:33:28,422 | INFO  | Connector ws started | org.apache.activemq.broker.TransportConnector | main
+2023-08-10 19:33:28,423 | INFO  | Apache ActiveMQ 5.18.2 (localhost, ID:shark-51110-1691706808135-0:1) started | org.apache.activemq.broker.BrokerService | main
+2023-08-10 19:33:28,423 | INFO  | For help or more information please see: http://activemq.apache.org | org.apache.activemq.broker.BrokerService | main
+2023-08-10 19:33:28,428 | WARN  | Store limit is 102400 mb (current store usage is 0 mb). The data directory: C:\Users\artur\Documents\CompassUOL\UDEMY\WEEK-12-Challenge-3\apache-activemq-5.18.2\bin\..\data\kahadb only has 8647 mb of usable space. - resetting to maximum available disk space: 8647 mb | org.apache.activemq.broker.BrokerService | main
+2023-08-10 19:33:28,430 | WARN  | Temporary Store limit is 51200 mb (current store usage is 0 mb). The data directory: C:\Users\artur\Documents\CompassUOL\UDEMY\WEEK-12-Challenge-3\apache-activemq-5.18.2\bin\..\data only has 8647 mb of usable space. - resetting to maximum available disk space: 8647 mb | org.apache.activemq.broker.BrokerService | main
+2023-08-10 19:33:28,859 | INFO  | ActiveMQ WebConsole available at http://127.0.0.1:8161/ | org.apache.activemq.web.WebConsoleStarter | main
+2023-08-10 19:33:28,859 | INFO  | ActiveMQ Jolokia REST API available at http://127.0.0.1:8161/api/jolokia/ | org.apache.activemq.web.WebConsoleStarter | main
+2023-08-10 19:46:43,209 | WARN  | Transport Connection to: tcp://0:0:0:0:0:0:0:1:51645 failed: Frame size of 1 GB larger than max allowed 100 MB | org.apache.activemq.broker.TransportConnection.Transport | ActiveMQ Transport: tcp:///0:0:0:0:0:0:0:1:51645@61616
+2023-08-10 19:46:44,418 | WARN  | Transport Connection to: tcp://0:0:0:0:0:0:0:1:51646 failed: Frame size of 1 GB larger than max allowed 100 MB | org.apache.activemq.broker.TransportConnection.Transport | ActiveMQ Transport: tcp:///0:0:0:0:0:0:0:1:51646@61616
+2023-08-10 19:47:14,427 | WARN  | Transport Connection to: tcp://0:0:0:0:0:0:0:1:51650 failed: Channel was inactive (no connection attempt made) for too (>30000) long: tcp://0:0:0:0:0:0:0:1:51650 | org.apache.activemq.broker.TransportConnection.Transport | ActiveMQ InactivityMonitor Worker 0
+2023-08-10 19:50:28,289 | WARN  | Transport Connection to: tcp://0:0:0:0:0:0:0:1:51776 failed: Frame size of 1 GB larger than max allowed 100 MB | org.apache.activemq.broker.TransportConnection.Transport | ActiveMQ Transport: tcp:///0:0:0:0:0:0:0:1:51776@61616
+2023-08-10 19:50:29,431 | WARN  | Transport Connection to: tcp://0:0:0:0:0:0:0:1:51781 failed: Frame size of 1 GB larger than max allowed 100 MB | org.apache.activemq.broker.TransportConnection.Transport | ActiveMQ Transport: tcp:///0:0:0:0:0:0:0:1:51781@61616
+2023-08-10 19:53:11,891 | INFO  | Connector vm://localhost started | org.apache.activemq.broker.TransportConnector | qtp1271084832-49

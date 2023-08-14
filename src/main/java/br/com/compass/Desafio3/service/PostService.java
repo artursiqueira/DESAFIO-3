@@ -5,16 +5,17 @@ import br.com.compass.Desafio3.entity.Comment;
 import br.com.compass.Desafio3.entity.Post;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 public interface PostService {
 
-    List<Post> queryPosts();
+    CompletableFuture<List<Post>> queryPostsAsync();
 
-    Post processPost(Long postId, Post requestBody);
+    CompletableFuture<Post> processPostAsync(Long postId, Post requestBody);
 
-    Post disablePost(Long postId);
+    CompletableFuture<Post> disablePostAsync(Long postId);
 
-    Post reprocessPost(Long postId);
+    CompletableFuture<Post> reprocessPostAsync(Long postId);
 
     Post findPostById(Long postId);
 
